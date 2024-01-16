@@ -45,7 +45,10 @@
 
 #include <controller_interface/controller_interface.hpp>
 
+#include "realtime_tools/realtime_buffer.h"
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "rcl_interfaces/msg/set_parameters_result.hpp"
+#include "rclcpp/rclcpp.hpp"
 
 namespace cartesian_twist_controller
 {
@@ -71,6 +74,21 @@ namespace cartesian_twist_controller
  * qualitatively high P gains and a higher number of internal solver iterations.
  *
  */
+
+/**
+ * \brief Trajectory state tolerances for force/torque.
+ *
+ * A tolerance value of zero means that no tolerance will be applied for that variable.
+ */
+struct WrenchTolerances
+{
+  double forceTotal = 0.0;
+  double forceVec[3] = {0};
+  double torqueTotal = 0.0;
+  double torqueVec[3] = {0};
+  rclcpp::Duration timeout = rclcpp::Duration(0, 0);
+};
+
 class CartesianTwistController : public virtual cartesian_controller_base::CartesianControllerBase
 {
 public:
@@ -114,8 +132,18 @@ protected:
      *
      * @return The error as a 6-dim vector (linear, angular) w.r.t to the robot base link
      */
-  ctrl::Vector6D m_twist;
+  WrenchTolerances wrench_tolerances_;
+  std::string m_wrench_topic_ = "";
+  realtime_tools::RealtimeBuffer<std::shared_ptr<geometry_msgs::msg::WrenchStamped>> rt_wrench_stamped_;
+  rclcpp::Subscription<geometry_msgs::msg::WrenchStamped>::SharedPtr wrench_subscriber_ =
+    nullptr;
 
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr callback_handle_;
+  bool check_wrench_threshold(const rclcpp::Time & time);
+  void updateWrenchFromParams();
+  rcl_interfaces::msg::SetParametersResult parametersCallback(const std::vector<rclcpp::Parameter> &parameters);
+
+  ctrl::Vector6D m_twist;
   void twistCallback(const geometry_msgs::msg::TwistStamped::SharedPtr target);
 
   rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr m_twist_subscr;
