@@ -43,6 +43,7 @@
 #include <cartesian_controller_base/IKSolver.h>
 
 #include <kdl/jacobian.hpp>
+#include <kdl/chainiksolvervel_wdls.hpp>
 #include <memory>
 
 #include "rclcpp/node.hpp"
@@ -103,6 +104,7 @@ public:
 
 private:
   std::shared_ptr<KDL::ChainJntToJacSolver> m_jnt_jacobian_solver;
+  std::shared_ptr<KDL::ChainIkSolverVel_wdls> m_kdl_chainiksolver;
   KDL::Jacobian m_jnt_jacobian;
 
   // Dynamic parameters

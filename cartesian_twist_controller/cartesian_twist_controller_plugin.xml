@@ -1,0 +1,11 @@
+<library path="cartesian_twist_controller">
+
+  <class name="cartesian_twist_controller/CartesianTwistController"
+         type="cartesian_twist_controller::CartesianTwistController"
+         base_class_type="controller_interface::ControllerInterface">
+    <description>
+      Steer your robot's end effector with Twists in the Base Frame.
+    </description>
+  </class>
+
+</library>

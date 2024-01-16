@@ -65,7 +65,7 @@ PLUGINLIB_EXPORT_CLASS(cartesian_controller_base::DampedLeastSquaresSolver,
 
 namespace cartesian_controller_base
 {
-DampedLeastSquaresSolver::DampedLeastSquaresSolver() : m_alpha(0.01) {}
+DampedLeastSquaresSolver::DampedLeastSquaresSolver() : m_alpha(0.001) {}
 
 DampedLeastSquaresSolver::~DampedLeastSquaresSolver() {}
 
@@ -73,18 +73,15 @@ trajectory_msgs::msg::JointTrajectoryPoint DampedLeastSquaresSolver::getJointCon
   rclcpp::Duration period, const ctrl::Vector6D & net_force)
 {
   // Compute joint jacobian
-  m_jnt_jacobian_solver->JntToJac(m_current_positions, m_jnt_jacobian);
+  KDL::Twist twist;
+  twist.vel.x(net_force(0));
+  twist.vel.y(net_force(1));
+  twist.vel.z(net_force(2));
+  twist.rot.x(net_force(3));
+  twist.rot.y(net_force(4));
+  twist.rot.z(net_force(5));
 
-  // Compute joint velocities according to:
-  // \f$ \dot{q} = ( J^T J + \alpha^2 I )^{-1} J^T f \f$
-  ctrl::MatrixND identity;
-  identity.setIdentity(m_number_joints, m_number_joints);
-  m_handle->get_parameter(m_params + "/alpha", m_alpha);
-
-  m_current_velocities.data =
-    (m_jnt_jacobian.data.transpose() * m_jnt_jacobian.data + m_alpha * m_alpha * identity)
-      .inverse() *
-    m_jnt_jacobian.data.transpose() * net_force;
+  m_kdl_chainiksolver->CartToJnt(m_current_positions, twist, m_current_velocities);
 
   // Integrate once, starting with zero motion
   m_current_positions.data =
@@ -126,8 +123,12 @@ bool DampedLeastSquaresSolver::init(std::shared_ptr<rclcpp::Node> nh,
   m_jnt_jacobian_solver.reset(new KDL::ChainJntToJacSolver(m_chain));
   m_jnt_jacobian.resize(m_number_joints);
 
+  m_kdl_chainiksolver.reset(new KDL::ChainIkSolverVel_wdls(m_chain));
+
   nh->declare_parameter<double>(m_params + "/alpha", 1.0);
   m_handle = nh;
+  m_handle->get_parameter(m_params + "/alpha", m_alpha);
+  m_kdl_chainiksolver->setLambda(m_alpha);
 
   return true;
 }
