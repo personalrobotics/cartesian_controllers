@@ -127,6 +127,7 @@ bool DampedLeastSquaresSolver::init(std::shared_ptr<rclcpp::Node> nh,
   m_jnt_jacobian.resize(m_number_joints);
 
   nh->declare_parameter<double>(m_params + "/alpha", 1.0);
+  m_handle = nh;
 
   return true;
 }
