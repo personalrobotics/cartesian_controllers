@@ -303,6 +303,7 @@ void CartesianTwistController::updateWrenchFromParams()
   wrench_tolerances_.torqueVec[0] = get_node()->get_parameter("wrench_threshold.tx").as_double();
   wrench_tolerances_.torqueVec[1] = get_node()->get_parameter("wrench_threshold.ty").as_double();
   wrench_tolerances_.torqueVec[2] = get_node()->get_parameter("wrench_threshold.tz").as_double();
+  RCLCPP_INFO(get_node()->get_logger(), "Updating Wrench Thresholds, fMag %f", wrench_tolerances_.forceTotal);
 }
 
 rcl_interfaces::msg::SetParametersResult CartesianTwistController::parametersCallback(
