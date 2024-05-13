@@ -303,16 +303,53 @@ void CartesianTwistController::updateWrenchFromParams()
   wrench_tolerances_.torqueVec[0] = get_node()->get_parameter("wrench_threshold.tx").as_double();
   wrench_tolerances_.torqueVec[1] = get_node()->get_parameter("wrench_threshold.ty").as_double();
   wrench_tolerances_.torqueVec[2] = get_node()->get_parameter("wrench_threshold.tz").as_double();
-  RCLCPP_INFO(get_node()->get_logger(), "Updating Wrench Thresholds, fMag %f", wrench_tolerances_.forceTotal);
 }
 
 rcl_interfaces::msg::SetParametersResult CartesianTwistController::parametersCallback(
     const std::vector<rclcpp::Parameter> &parameters)
 {
   rcl_interfaces::msg::SetParametersResult result;
+  for (const auto &parameter : parameters) {
+    if (parameter.get_name() == "wrench_threshold.timeout")
+    {
+      wrench_tolerances_.timeout = rclcpp::Duration::from_seconds(parameter.as_double());
+    }
+    else if (parameter.get_name() == "wrench_threshold.fMag")
+    {
+      wrench_tolerances_.forceTotal = parameter.as_double();
+      RCLCPP_INFO(get_node()->get_logger(), "Updating Wrench Thresholds, fMag %f", wrench_tolerances_.forceTotal);
+    }
+    else if (parameter.get_name() == "wrench_threshold.fx")
+    {
+      wrench_tolerances_.forceVec[0] = parameter.as_double();
+    }
+    else if (parameter.get_name() == "wrench_threshold.fy")
+    {
+      wrench_tolerances_.forceVec[1] = parameter.as_double();
+    }
+    else if (parameter.get_name() == "wrench_threshold.fz")
+    {
+      wrench_tolerances_.forceVec[2] = parameter.as_double();
+    }
+    else if (parameter.get_name() == "wrench_threshold.tMag")
+    {
+      wrench_tolerances_.torqueTotal = parameter.as_double();
+    }
+    else if (parameter.get_name() == "wrench_threshold.tx")
+    {
+      wrench_tolerances_.torqueVec[0] = parameter.as_double();
+    }
+    else if (parameter.get_name() == "wrench_threshold.ty")
+    {
+      wrench_tolerances_.torqueVec[1] = parameter.as_double();
+    }
+    else if (parameter.get_name() == "wrench_threshold.tz")
+    {
+      wrench_tolerances_.torqueVec[2] = parameter.as_double();
+    }
+  }
   result.successful = true;
   result.reason = "success";
-  updateWrenchFromParams();
   return result;
 }
 
