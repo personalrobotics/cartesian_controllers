@@ -143,6 +143,8 @@ protected:
   void updateWrenchFromParams();
   rcl_interfaces::msg::SetParametersResult parametersCallback(const std::vector<rclcpp::Parameter> &parameters);
 
+  rclcpp::Time m_twist_stamp = rclcpp::Time(0, 0, RCL_ROS_TIME);
+  rclcpp::Duration m_twist_timeout = rclcpp::Duration(0, 0);
   ctrl::Vector6D m_twist;
   void twistCallback(const geometry_msgs::msg::TwistStamped::SharedPtr target);
 

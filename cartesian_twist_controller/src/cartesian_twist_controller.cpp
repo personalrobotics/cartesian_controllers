@@ -72,6 +72,7 @@ CartesianTwistController::on_init()
   auto_declare<double>("wrench_threshold.tx", 0.0);
   auto_declare<double>("wrench_threshold.ty", 0.0);
   auto_declare<double>("wrench_threshold.tz", 0.0);
+  auto_declare<double>("twist_timeout_sec", 0.5);
 
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
 }
@@ -95,6 +96,7 @@ controller_interface::return_type CartesianTwistController::init(
   auto_declare<double>("wrench_threshold.tx", 0.0);
   auto_declare<double>("wrench_threshold.ty", 0.0);
   auto_declare<double>("wrench_threshold.tz", 0.0);
+  auto_declare<double>("twist_timeout_sec", 0.5);
 
   return controller_interface::return_type::OK;
 }
@@ -104,6 +106,8 @@ rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
 CartesianTwistController::on_configure(const rclcpp_lifecycle::State & previous_state)
 {
   const auto ret = Base::on_configure(previous_state);
+
+  m_twist_timeout = rclcpp::Duration::from_seconds(get_node()->get_parameter("twist_timeout_sec").as_double());
 
   m_wrench_topic_ = get_node()->get_parameter("wrench_threshold.topic").as_string();
   updateWrenchFromParams();
@@ -164,6 +168,12 @@ controller_interface::return_type CartesianTwistController::update()
 
   // Force Gate
   if (!check_wrench_threshold(time)) {
+    m_twist = ctrl::Vector6D::Zero();
+  }
+
+  // Check for stale twist
+  if (get_node()->now() - m_twist_stamp > m_twist_timeout)
+  {
     m_twist = ctrl::Vector6D::Zero();
   }
 
@@ -265,6 +275,7 @@ bool CartesianTwistController::check_wrench_threshold(const rclcpp::Time & time)
 void CartesianTwistController::twistCallback(
   const geometry_msgs::msg::TwistStamped::SharedPtr target)
 {
+  // Check for NaNs in the twist
   if (std::isnan(target->twist.linear.x) || std::isnan(target->twist.linear.y) ||
       std::isnan(target->twist.linear.z) || std::isnan(target->twist.angular.x) ||
       std::isnan(target->twist.angular.y) || std::isnan(target->twist.angular.z))
@@ -275,12 +286,23 @@ void CartesianTwistController::twistCallback(
     return;
   }
 
+  // Check for twist in the wrong reference frame
   if (target->header.frame_id != Base::m_robot_base_link)
   {
     auto & clock = *get_node()->get_clock();
     RCLCPP_WARN_THROTTLE(get_node()->get_logger(), clock, 3000,
                          "Got twist in wrong reference frame. Expected: %s but got %s",
                          Base::m_robot_base_link.c_str(), target->header.frame_id.c_str());
+    return;
+  }
+
+  // Check for a stale twist (i.e., timestamp over 0.5s old)
+  m_twist_stamp = rclcpp::Time(target->header.stamp);
+  if (m_twist_stamp < get_node()->now() - m_twist_timeout)
+  {
+    auto & clock = *get_node()->get_clock();
+    RCLCPP_WARN_STREAM_THROTTLE(get_node()->get_logger(), clock, 3000,
+                                "Stale twist detected. Ignoring input.");
     return;
   }
 
