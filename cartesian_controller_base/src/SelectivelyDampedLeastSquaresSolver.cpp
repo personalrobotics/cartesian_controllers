@@ -88,7 +88,7 @@ trajectory_msgs::msg::JointTrajectoryPoint SelectivelyDampedLeastSquaresSolver::
   // Also see Buss' own implementation:
   // https://www.math.ucsd.edu/~sbuss/ResearchWeb/ikmethods/index.html
 
-  for (int i = 0; i < m_number_joints; ++i)
+  for (int i = 0; i < U.cols(); ++i)
   {
     double alpha = U.col(i).transpose() * net_force;
 
